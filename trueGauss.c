@@ -39,6 +39,7 @@ int gaussianElimination(int size, double **matrix, double *y, int rank, int num_
             // Precisamos enviar a nova linha para todas as matrizes
             // Enviamos todo o conteúdo da linha j com tamanho size vindo de rank
             MPI_Bcast(matrix[j], size, MPI_DOUBLE, rank, MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
         }
 
         // Esperamos todos os processos terminarem para continuar com o próximo pivo
@@ -63,8 +64,8 @@ int main(int argc, char** argv){
     }
 
     srand(1);
-    for (int i = rank; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             matrix[i][j] = rand() % 100 + 1;
         }
         y[i] = rand() % 100 + 1;
@@ -73,7 +74,10 @@ int main(int argc, char** argv){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    //print_matrix(n, matrix, y, "Teste", rank);
+    print_matrix(n, matrix, y, "Teste", rank);
+    if(gaussianElimination(n, matrix, y, rank, size) == 0){
+        print_matrix(n, matrix, y, "Resultado", rank);
+    }
 
     MPI_Finalize();
     return 0;

@@ -29,21 +29,21 @@ int gaussianElimination(int size, double **matrix, double *y, int rank, int num_
         // i = linha pivo
         // j = linha atual
         // k = coluna atual
-        for ( int j = rank; j < size; j += num_procs ){
-            double factor = matrix[j][i] / matrix[i][i];
-            for ( int k = j; k < size; k++){
-                matrix[j][k] -= factor * matrix[i][k];
+        for ( int j = i+1; j < size; j++ ){
+            // Só o processo com o rank que corresponde à essa linha executa
+            if (rank == j % size){
+                double factor = matrix[j][i] / matrix[i][i];
+                for ( int k = i; k < size; k++){
+                    matrix[j][k] -= factor * matrix[i][k];
+                }
+                y[j] -= factor * y[i];
             }
-            y[j] -= factor * y[i];
-            
-            // Precisamos enviar a nova linha para todas as matrizes
+            // Então enviamos o conteúdo da nova linha para todas as matrizes
             // Enviamos todo o conteúdo da linha j com tamanho size vindo de rank
-            MPI_Bcast(matrix[j], size, MPI_DOUBLE, rank, MPI_COMM_WORLD);
+            MPI_Bcast(matrix[j], size, MPI_DOUBLE, j % size, MPI_COMM_WORLD);
+            MPI_Bcast(&y[j], 1, MPI_DOUBLE, j % size, MPI_COMM_WORLD);
             MPI_Barrier(MPI_COMM_WORLD);
         }
-
-        // Esperamos todos os processos terminarem para continuar com o próximo pivo
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     return 0;

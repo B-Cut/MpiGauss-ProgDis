@@ -31,7 +31,7 @@ int gaussianElimination(int size, double **matrix, double *y, int rank, int num_
         // k = coluna atual
         for ( int j = i+1; j < size; j++ ){
             // Só o processo com o rank que corresponde à essa linha executa
-            if (rank == j % size){
+            if (rank == j % num_procs){
                 double factor = matrix[j][i] / matrix[i][i];
                 for ( int k = i; k < size; k++){
                     matrix[j][k] -= factor * matrix[i][k];
@@ -40,8 +40,8 @@ int gaussianElimination(int size, double **matrix, double *y, int rank, int num_
             }
             // Então enviamos o conteúdo da nova linha para todas as matrizes
             // Enviamos todo o conteúdo da linha j com tamanho size vindo de rank
-            MPI_Bcast(matrix[j], size, MPI_DOUBLE, j % size, MPI_COMM_WORLD);
-            MPI_Bcast(&y[j], 1, MPI_DOUBLE, j % size, MPI_COMM_WORLD);
+            MPI_Bcast(matrix[j], size, MPI_DOUBLE, j % num_procs, MPI_COMM_WORLD);
+            MPI_Bcast(&y[j], 1, MPI_DOUBLE, j % num_procs, MPI_COMM_WORLD);
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }

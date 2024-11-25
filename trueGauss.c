@@ -17,6 +17,16 @@ void print_matrix(int n, double** matrix, double* y, const char* label, int rank
     //}
 }
 
+void print_vector(int n, double* vet, const char* label, int rank) {
+    //if (rank == 0) {
+        printf("%s do rank %d:\n", label, rank);
+        for (int i = 0; i < n; ++i) {
+            printf("%8.2f, ", vet[i]);
+        }
+        printf("\n");
+    //}
+}
+
 int gaussianElimination(int size, double **matrix, double *y, int rank, int num_procs){
     // Navega pelos pivos
     for (int i = 0; i < size; i++){
@@ -42,11 +52,23 @@ int gaussianElimination(int size, double **matrix, double *y, int rank, int num_
             // Enviamos todo o conteúdo da linha j com tamanho size vindo de rank
             MPI_Bcast(matrix[j], size, MPI_DOUBLE, j % num_procs, MPI_COMM_WORLD);
             MPI_Bcast(&y[j], 1, MPI_DOUBLE, j % num_procs, MPI_COMM_WORLD);
-            MPI_Barrier(MPI_COMM_WORLD);
         }
     }
 
     return 0;
+}
+
+void back_substitution(int n, double** matrix, double* b, double* x, int rank, int size) {
+    for (int i = n - 1; i >= 0; --i) {
+        if (rank == i % size) {
+            x[i] = b[i];
+            for (int j = i + 1; j < n; ++j) {
+                x[i] -= matrix[i][j] * x[j];
+            }
+            x[i] /= matrix[i][i];
+        }
+        MPI_Bcast(&x[i], 1, MPI_DOUBLE, i % size, MPI_COMM_WORLD);
+    }
 }
 
 int main(int argc, char** argv){
@@ -74,11 +96,22 @@ int main(int argc, char** argv){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+
+    double start = MPI_Wtime();
+
     print_matrix(n, matrix, y, "Teste", rank);
     if(gaussianElimination(n, matrix, y, rank, size) == 0){
-        print_matrix(n, matrix, y, "Resultado", rank);
+        back_substitution(n, matrix, y, res, rank, size);
+
     }
 
+    double end = MPI_Wtime();
+    //print_matrix(n, matrix, b, "Depois", rank);
+    if (rank == 0) {
+        print_matrix(n, matrix, y, "Resultado", rank);
+        print_vector(n, res, "Valor de x", rank);
+        printf("Time taken for size %d: %f seconds\n", n, end - start); 
+    }
     MPI_Finalize();
     return 0;
 }
